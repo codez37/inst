@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Instagram Tax Bot
+  instagram-tax-bot:
+    build: .
+    container_name: instagram-tax-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/taxbotdb
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./logs:/app/logs
+      - ./session.json:/app/session.json
+    networks:
+      - tax-bot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7-jammy
+    container_name: mongodb-tax-bot
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=taxbotdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - tax-bot-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Express (اختیاری - برای مدیریت دیتابیس)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express-tax-bot
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - tax-bot-network
+    profiles:
+      - admin
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  tax-bot-network:
+    driver: bridge
