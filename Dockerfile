@@ -4,35 +4,36 @@ FROM node:18-alpine
 # تنظیم متغیر محیطی
 ENV NODE_ENV=production
 
+# نصب ابزارهای ضروری
+RUN apk add --no-cache curl
+
 # ایجاد دایرکتری کاری
 WORKDIR /app
 
 # کپی کردن package files
 COPY package*.json ./
-COPY pnpm-lock.yaml* ./
 
-# نصب pnpm (اختیاری)
-RUN npm install -g pnpm
-
-# نصب dependencies
-RUN pnpm install --frozen-lockfile --prod
+# نصب dependencies با npm (بجای pnpm برای سادگی)
+RUN npm ci --only=production
 
 # کپی کردن کد برنامه
 COPY . .
 
-# ایجاد دایرکتری logs
-RUN mkdir -p logs
+# ایجاد دایرکتری logs و تنظیم مجوزها
+RUN mkdir -p logs && \
+    chmod +x docker-healthcheck.js && \
+    chmod +x start.sh && \
+    chown -R node:node /app
 
-# تنظیم مجوزها
-RUN chown -R node:node /app
+# تغییر به کاربر node
 USER node
 
 # تنظیم health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node docker-healthcheck.js
 
 # expose کردن port
 EXPOSE 3000
 
 # دستور اجرا
-CMD ["node", "app.js"]
+CMD ["./start.sh"]

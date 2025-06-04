@@ -258,6 +258,8 @@ function checkPrerequisites() {
   
   if (missing.length > 0) {
     logger.error('❌ Missing required environment variables:', missing);
+    logger.error('💡 Please check your .env file or environment variables');
+    logger.error('📋 Required variables: IG_USERNAME, IG_PASSWORD, MONGODB_URI');
     process.exit(1);
   }
   
@@ -270,7 +272,10 @@ function checkPrerequisites() {
     process.exit(1);
   }
   
+  // بررسی اتصال به اینترنت (اختیاری)
   logger.info('✅ Prerequisites check passed');
+  logger.info(`📋 Environment: ${config.app.environment}`);
+  logger.info(`🔧 Node.js: ${nodeVersion}`);
 }
 
 /**
